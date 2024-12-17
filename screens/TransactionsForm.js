@@ -17,7 +17,7 @@ const TransactionsForm = () => {
 
   // Hook para pegar moedas
   const { currencyInfo, isLoading, message } = GetCurrencyInfo();
-  const [showOptions, setShowOptions] = useState(false); // Controla a visibilidade das opções
+  const [showOptions, setShowOptions] = useState(false);
 
   const [descricao, setDescricao] = useState("");
   const [valor, setValor] = useState("");
@@ -28,7 +28,7 @@ const TransactionsForm = () => {
   const [moeda, setMoeda] = useState("");
   const [transactions, setTransactions] = useState([]);
 
-  // Função para salvar os dados no estado e AsyncStorage
+  // Função para salvar os dados no estado e no
   const handleSubmit = async () => {
     // Remover espaços extras antes da validação
     const trimmedDescricao = descricao.trim();
@@ -49,46 +49,50 @@ const TransactionsForm = () => {
       !trimmedTipo ||
       !trimmedMoeda
     ) {
-      Alert.alert("Erro", "Preencha todos os campos!");
+      console.log("Erro", "Preencha todos os campos!");
       return;
     }
 
     const { data, error } = await supabase.auth.getUser();
 
     if (error || !data?.user) {
-      Alert.alert("Erro", "Usuário não autenticado.");
+      console.log("Erro", "Usuário não autenticado.");
       return;
     }
 
     const userId = data.user.id; // ID do usuário autenticado
     console.log("Usuário autenticado:", userId);
 
-    const newTransaction = {
-      user_id: userId, // Associar ao ID do usuário
-      descricao,
-      valor: parseFloat(valor),
-      data,
-      hora,
-      categoria,
-      tipo,
-      moeda,
-    };
-
     try {
       // Atualiza a variável de estado
       const updatedTransactions = [...transactions, newTransaction];
       setTransactions(updatedTransactions);
 
+      const newTransaction = {
+        user_id: userId,
+        descricao: trimmedDescricao,
+        valor: parseFloat(trimmedValor),
+        data: trimmedData,
+        hora: trimmedHora,
+        categoria: trimmedCategoria,
+        tipo: trimmedTipo,
+        moeda: trimmedMoeda,
+      };
+
+      console.log("Transação:", newTransaction);
+
       // Salva no Supabase
       const { error } = await supabase
         .from("client_transacoes")
         .insert([newTransaction]);
-      if (error) throw error;
 
-      Alert.alert("Sucesso", "Transação salva com sucesso!");
+      if (error) {
+        console.error("Erro ao salvar no Supabase:", error);
+        return;
+      }
 
       // Navega para a lista e envia os dados
-      navigation.navigate("TransacaoListScreen");
+      // navigation.navigate("TransacaoListScreen");
 
       // Limpa o formulário
       setDescricao("");
@@ -142,27 +146,14 @@ const TransactionsForm = () => {
             onChangeText={setCategoria}
           />
 
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[
-                styles.optionButton,
-                tipo === "receita" && styles.selectedButton,
-              ]}
-              onPress={() => setTipo("receita")}
-            >
-              <Text style={styles.buttonText}>Receita</Text>
-            </TouchableOpacity>
+          <TextInput
+            style={styles.input}
+            placeholder="Tipo (ex.: receita, despesa)"
+            value={tipo}
+            onChangeText={setTipo}
+          />
 
-            <TouchableOpacity
-              style={[
-                styles.optionButton,
-                tipo === "despesa" && styles.selectedButton,
-              ]}
-              onPress={() => setTipo("despesa")}
-            >
-              <Text style={styles.buttonText}>Despesa</Text>
-            </TouchableOpacity>
-          </View>
+          {/*Escolha da moeda*/}
 
           <TouchableOpacity
             style={styles.dropdown}
@@ -282,7 +273,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     alignItems: "center",
     justifyContent: "center",
-    flex: 1, // Ajusta o espaço ocupado
+    flex: 1,
   },
 
   viewButton: {

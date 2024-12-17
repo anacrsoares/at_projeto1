@@ -9,24 +9,20 @@ const TransacaoListScreen = () => {
   const [loading, setLoading] = useState(true);
 
   const fetchTransactions = async () => {
-    const { data: user, error: userError } = await supabase.auth.getUser();
-    if (userError || !user?.user?.id) {
-      Alert.alert("Erro", "Usuário não autenticado.");
-      return;
-    }
-
     try {
+      // Buscar as transações no Supabase
       const { data, error } = await supabase
-        .from("transacoes")
+        .from("client_transacoes")
         .select("*")
-        .eq("user_id", user.user.id)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
+      console.log("Transações carregadas:", data); // Log para verificar dados do supabase
       setTransactions(data);
     } catch (error) {
-      console.error(error);
-      Alert.alert("Erro", "Falha ao carregar transações.");
+      console.error("Erro ao buscar transações:", error);
     } finally {
       setLoading(false);
     }
