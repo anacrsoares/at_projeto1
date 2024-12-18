@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,33 +8,53 @@ import {
   TouchableOpacity,
   FlatList,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
 import GetCurrencyInfo from "../api/GetCurrencyInfo";
-import { supabase } from "../supabaseClient";
+import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
 const TransactionsForm = () => {
   const navigation = useNavigation();
 
-  // Hook para pegar moedas
-  const { currencyInfo, isLoading, message } = GetCurrencyInfo();
+  // Variáveis localStorage
+  const token = AsyncStorage.getItem("access_token");
+  const userId = AsyncStorage.getItem("userId");
+
+  // Meu hook para pegar moedas
+  const { currencyInfo, isLoading } = GetCurrencyInfo();
   const [showOptions, setShowOptions] = useState(false);
 
-  const [descricao, setDescricao] = useState("");
-  const [valor, setValor] = useState("");
-  const [data, setData] = useState("");
-  const [hora, setHora] = useState("");
-  const [categoria, setCategoria] = useState("");
-  const [tipo, setTipo] = useState("");
+  const [descricao, setDescricao] = useState("a");
+  const [valor, setValor] = useState("22");
+  const [data, setData] = useState(new Date());
+  const [hora, setHora] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [categoria, setCategoria] = useState("saúde");
+  const [tipo, setTipo] = useState("despesa");
   const [moeda, setMoeda] = useState("");
   const [transactions, setTransactions] = useState([]);
 
-  // Função para salvar os dados no estado e no
+  // Funções para abrir componentes de data e hora
+
+  const handleDateChange = (event, selectedDate) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      setData(selectedDate);
+    }
+  };
+
+  const handleTimeChange = (event, selectedTime) => {
+    setShowTimePicker(false);
+    if (selectedTime) {
+      setHora(selectedTime);
+    }
+  };
+
+  // Função para salvar os dados no Local Storage
   const handleSubmit = async () => {
-    // Remover espaços extras antes da validação
     const trimmedDescricao = descricao.trim();
     const trimmedValor = valor.trim();
-    const trimmedData = data.trim();
-    const trimmedHora = hora.trim();
     const trimmedCategoria = categoria.trim();
     const trimmedTipo = tipo.trim();
     const trimmedMoeda = moeda.trim();
@@ -43,69 +63,53 @@ const TransactionsForm = () => {
     if (
       !trimmedDescricao ||
       !trimmedValor ||
-      !trimmedData ||
-      !trimmedHora ||
+      !data ||
+      !hora ||
       !trimmedCategoria ||
       !trimmedTipo ||
       !trimmedMoeda
     ) {
-      console.log("Erro", "Preencha todos os campos!");
+      Alert.alert("Erro", "Preencha todos os campos!");
       return;
     }
 
-    const { data, error } = await supabase.auth.getUser();
+    const newTransaction = {
+      user_id: userId,
+      descricao: trimmedDescricao,
+      valor: parseFloat(trimmedValor),
+      data: data.toLocaleDateString("pt-BR"),
+      hora: hora.toLocaleTimeString("pt-BR"),
+      categoria: trimmedCategoria,
+      tipo: trimmedTipo,
+      moeda: trimmedMoeda,
+    };
 
-    if (error || !data?.user) {
-      console.log("Erro", "Usuário não autenticado.");
-      return;
-    }
+    // Atualiza a variável de estado
+    const updatedTransactions = [...transactions, newTransaction];
+    setTransactions(updatedTransactions);
 
-    const userId = data.user.id; // ID do usuário autenticado
-    console.log("Usuário autenticado:", userId);
+    console.log("Transação:", updatedTransactions);
 
-    try {
-      // Atualiza a variável de estado
-      const updatedTransactions = [...transactions, newTransaction];
-      setTransactions(updatedTransactions);
+    // Cria o objeto de sessão
+    const sessionData = {
+      token,
+      userId,
+      transactions: updatedTransactions,
+    };
 
-      const newTransaction = {
-        user_id: userId,
-        descricao: trimmedDescricao,
-        valor: parseFloat(trimmedValor),
-        data: trimmedData,
-        hora: trimmedHora,
-        categoria: trimmedCategoria,
-        tipo: trimmedTipo,
-        moeda: trimmedMoeda,
-      };
+    // Limpa o formulário
+    setDescricao("");
+    setValor("");
+    setData(new Date());
+    setHora(new Date());
+    setCategoria("");
+    setTipo("");
+    setMoeda("");
 
-      console.log("Transação:", newTransaction);
-
-      // Salva no Supabase
-      const { error } = await supabase
-        .from("client_transacoes")
-        .insert([newTransaction]);
-
-      if (error) {
-        console.error("Erro ao salvar no Supabase:", error);
-        return;
-      }
-
-      // Navega para a lista e envia os dados
-      // navigation.navigate("TransacaoListScreen");
-
-      // Limpa o formulário
-      setDescricao("");
-      setValor("");
-      setData("");
-      setHora("");
-      setCategoria("");
-      setTipo("");
-      setMoeda("");
-    } catch (error) {
-      console.error(error);
-      Alert.alert("Erro", "Falha ao salvar a transação.");
-    }
+    // Navega para a lista e envia os dados
+    navigation.navigate("TransacaoListScreen", {
+      sessionData: { transactions: updatedTransactions },
+    });
   };
 
   return (
@@ -127,18 +131,37 @@ const TransactionsForm = () => {
             onChangeText={setValor}
             keyboardType="numeric"
           />
-          <TextInput
+          {/* Campo de data */}
+          <TouchableOpacity
             style={styles.input}
-            placeholder="Data (dd/mm/aaaa)"
-            value={data}
-            onChangeText={setData}
-          />
-          <TextInput
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Text>{data.toLocaleDateString("pt-BR")}</Text>
+          </TouchableOpacity>
+          {showDatePicker && (
+            <DateTimePicker
+              value={data}
+              mode="date"
+              display="default"
+              onChange={handleDateChange}
+            />
+          )}
+
+          {/* Campo de hora */}
+          <TouchableOpacity
             style={styles.input}
-            placeholder="Hora (hh:mm)"
-            value={hora}
-            onChangeText={setHora}
-          />
+            onPress={() => setShowTimePicker(true)}
+          >
+            <Text>{hora.toLocaleTimeString("pt-BR")}</Text>
+          </TouchableOpacity>
+          {showTimePicker && (
+            <DateTimePicker
+              value={hora}
+              mode="time"
+              display="default"
+              onChange={handleTimeChange}
+            />
+          )}
           <TextInput
             style={styles.input}
             placeholder="Categoria (ex.: alimentação, saúde)"
@@ -197,7 +220,11 @@ const TransactionsForm = () => {
 
             <TouchableOpacity
               style={styles.viewButton}
-              onPress={() => navigation.navigate("TransacaoListScreen")}
+              onPress={() =>
+                navigation.navigate("TransacaoListScreen", {
+                  sessionData: { transactions },
+                })
+              }
             >
               <Text style={styles.buttonText}>Ver Transações</Text>
             </TouchableOpacity>

@@ -1,6 +1,5 @@
 import { View, Text, StyleSheet, Dimensions, ScrollView } from "react-native";
 import React, { useEffect, useState } from "react";
-// import { ScrollView } from "react-native-gesture-handler";
 
 const TransacaoItemList = ({ transacao }) => {
   // Estado para armazenar a orientação
@@ -10,7 +9,7 @@ const TransacaoItemList = ({ transacao }) => {
   useEffect(() => {
     const handleOrientationChange = () => {
       const { width, height } = Dimensions.get("window");
-      setIsLandscape(width > height); // Paisagem se largura > altura
+      setIsLandscape(width > height);
     };
 
     // Adiciona listener de mudança de dimensão
@@ -27,18 +26,61 @@ const TransacaoItemList = ({ transacao }) => {
 
   const { descricao, valor, data, hora, categoria, tipo, moeda } = transacao;
 
+  // Configurar dados para o FlatList
+  const baseData = [
+    { key: "Descrição", value: descricao },
+    { key: "Valor", value: `R$ ${valor.toFixed(2)}` },
+    { key: "Data", value: data },
+  ];
+
+  const additionalData = [
+    { key: "Hora", value: hora },
+    { key: "Categoria", value: categoria },
+    { key: "Tipo", value: tipo },
+    { key: "Moeda", value: moeda },
+  ];
+
+  // Combinar dados com base na orientação
+  const listData = isLandscape ? [...baseData, ...additionalData] : baseData;
+
   return (
-    <ScrollView style={styles.scrollContainer}>
-      <Text style={styles.descricao}>{descricao}</Text>
-      <Text style={styles.valor}>
-        {moeda} {valor}
-      </Text>
-      <Text style={styles.detail}>Hora: {hora}</Text>
-      <Text style={styles.detail}>Categoria: {categoria}</Text>
-      <Text style={styles.detail}>
-        Tipo: {tipo.charAt(0).toUpperCase() + tipo.slice(1)}
-      </Text>
-    </ScrollView>
+    <View style={styles.container}>
+      {/* Dados sempre visíveis */}
+      <View style={styles.row}>
+        <Text style={styles.label}>Descrição:</Text>
+        <Text style={styles.value}>{descricao}</Text>
+      </View>
+      <View style={styles.row}>
+        <Text style={styles.label}>Valor:</Text>
+        <Text style={styles.value}>R$ {valor.toFixed(2)}</Text>
+      </View>
+      <View style={styles.row}>
+        <Text style={styles.label}>Data:</Text>
+        <Text style={styles.value}>{data}</Text>
+      </View>
+
+      {/* Dados adicionais no modo paisagem */}
+      {isLandscape && (
+        <>
+          <View style={styles.row}>
+            <Text style={styles.label}>Hora:</Text>
+            <Text style={styles.value}>{hora}</Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>Categoria:</Text>
+            <Text style={styles.value}>{categoria}</Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>Tipo:</Text>
+            <Text style={styles.value}>{tipo}</Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>Moeda:</Text>
+            <Text style={styles.value}>{moeda}</Text>
+          </View>
+        </>
+      )}
+    </View>
   );
 };
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 import {
   View,
@@ -11,6 +11,7 @@ import {
 } from "react-native";
 
 import { supabase } from "../utils/supabaseClient";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const Auth = ({ navigation }) => {
   const [email, setEmail] = useState("");
@@ -29,10 +30,20 @@ const Auth = ({ navigation }) => {
       if (data.user) {
         if (data.user.email_confirmed_at) {
           Alert.alert("Sucesso", "Login realizado com sucesso!");
+          console.log(data.user.id);
+          console.log(data.session.access_token);
         } else {
           Alert.alert("Erro", "Usuário não cadastrado.");
         }
       }
+
+      // Salva o token manualmente
+      await AsyncStorage.setItem("access_token", data.session.access_token);
+      console.log("Sessão salva:", data.session.access_token);
+
+      // Salva o userID manualmente
+      await AsyncStorage.setItem("userId", data.user.id);
+      console.log("userID salvo:", data.user.id);
 
       navigation.navigate("TransactionsForm");
     } catch (error) {
@@ -63,6 +74,30 @@ const Auth = ({ navigation }) => {
       setIsLoading(false);
     }
   };
+
+  const checkSession = async () => {
+    // variáveis localStorage
+    const token = await AsyncStorage.getItem("access_token");
+    const userId = await AsyncStorage.getItem("userId");
+
+    if (!token) {
+      console.log("Nenhum token encontrado. Redirecionando para login.");
+      navigation.navigate("Auth");
+    } else {
+      console.log("Token encontrado:", token);
+    }
+
+    if (!userId) {
+      console.log("Nenhum userId encontrado. Redirecionando para login.");
+      navigation.navigate("Auth");
+    } else {
+      console.log("userId encontrado:", userId);
+    }
+  };
+
+  useEffect(() => {
+    checkSession(), [];
+  });
 
   return (
     <View style={styles.container}>
