@@ -9,6 +9,7 @@ import {
   FlatList,
 } from "react-native";
 import GetCurrencyInfo from "../api/GetCurrencyInfo";
+import GetDailyCurrencyQuote from "../api/GetDailyCurrencyQuote";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -33,10 +34,10 @@ const TransactionsForm = () => {
   const [categoria, setCategoria] = useState("saúde");
   const [tipo, setTipo] = useState("despesa");
   const [moeda, setMoeda] = useState("");
+  const [moedaCotacao, setMoedaCotacao] = useState("");
   const [transactions, setTransactions] = useState([]);
 
   // Funções para abrir componentes de data e hora
-
   const handleDateChange = (event, selectedDate) => {
     setShowDatePicker(false);
     if (selectedDate) {
@@ -73,6 +74,12 @@ const TransactionsForm = () => {
       return;
     }
 
+    const formatDataCotacao = (date) => {
+      const isoDate = date.toISOString().split("T")[0]; // Retorna YYYY-MM-DD
+      const [year, month, day] = isoDate.split("-"); // Separa os componentes da data
+      return `${month}-${day}-${year}`; // Retorna no formato MM-DD-YYYY
+    };
+
     const newTransaction = {
       user_id: userId,
       descricao: trimmedDescricao,
@@ -82,13 +89,24 @@ const TransactionsForm = () => {
       categoria: trimmedCategoria,
       tipo: trimmedTipo,
       moeda: trimmedMoeda,
+      moedaCotacao: moedaCotacao,
+      dataCotacao: formatDataCotacao(data),
     };
+
+    console.log("Moeda: ", newTransaction.moedaCotacao);
+    console.log("Data: ", newTransaction.dataCotacao);
+
+    console.log("Nova transação criada:", newTransaction);
 
     // Atualiza a variável de estado
     const updatedTransactions = [...transactions, newTransaction];
+
     setTransactions(updatedTransactions);
 
-    console.log("Transação:", updatedTransactions);
+    console.log(
+      "Transação Completa>>>>>>",
+      JSON.stringify(updatedTransactions, null, 2)
+    );
 
     // Cria o objeto de sessão
     const sessionData = {
@@ -126,7 +144,7 @@ const TransactionsForm = () => {
           />
           <TextInput
             style={styles.input}
-            placeholder="Valor"
+            placeholder="Valor na moeda local"
             value={valor}
             onChangeText={setValor}
             keyboardType="numeric"
@@ -202,6 +220,7 @@ const TransactionsForm = () => {
                       style={styles.optionItem}
                       onPress={() => {
                         setMoeda(item.nomeFormatado);
+                        setMoedaCotacao(item.simbolo);
                         setShowOptions(false);
                       }}
                     >

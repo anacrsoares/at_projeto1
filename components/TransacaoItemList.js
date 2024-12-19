@@ -1,7 +1,43 @@
-import { View, Text, StyleSheet, Dimensions, ScrollView } from "react-native";
+import { View, Text, StyleSheet, Dimensions } from "react-native";
 import React, { useEffect, useState } from "react";
+import GetDailyCurrencyQuote from "../api/GetDailyCurrencyQuote";
 
 const TransacaoItemList = ({ transacao }) => {
+  // calculo em reais
+  console.log("transacao: ", transacao);
+  console.log(transacao.moedaCotacao);
+  console.log(transacao.dataCotacao);
+
+  const moedaCotacaoApi = transacao.moedaCotacao;
+  const dataCotacaoApi = transacao.dataCotacao;
+  const tipoTransacao = transacao.tipo.toLowerCase();
+
+  const { cotacao, url } = GetDailyCurrencyQuote({
+    moedaCotacao: moedaCotacaoApi,
+    dataCotacao: dataCotacaoApi,
+  });
+
+  console.log(cotacao);
+  console.log(url);
+
+  const [valorFinal, setValorFinal] = useState(null);
+
+  useEffect(() => {
+    const calcularValorFinal = () => {
+      if (cotacao.cotacaoCompra && cotacao.cotacaoVenda) {
+        const cotacaoAplicada =
+          tipoTransacao === "despesa"
+            ? cotacao.cotacaoCompra
+            : cotacao.cotacaoVenda;
+
+        const valorConvertido = parseFloat(transacao.valor) * cotacaoAplicada;
+        setValorFinal(valorConvertido.toFixed(2));
+      }
+    };
+
+    calcularValorFinal();
+  }, [cotacao, tipoTransacao, transacao.valor]);
+
   // Estado para armazenar a orientação
   const [isLandscape, setIsLandscape] = useState(false);
 
@@ -24,12 +60,22 @@ const TransacaoItemList = ({ transacao }) => {
     return () => subscription?.remove();
   }, []);
 
-  const { descricao, valor, data, hora, categoria, tipo, moeda } = transacao;
+  const {
+    descricao,
+    valor,
+    data,
+    hora,
+    categoria,
+    tipo,
+    moeda,
+    moedaCotacao,
+    dataCotacao,
+  } = transacao;
 
   // Configurar dados para o FlatList
   const baseData = [
     { key: "Descrição", value: descricao },
-    { key: "Valor", value: `R$ ${valor.toFixed(2)}` },
+    { key: "Valor", value: `${moedaCotacao} ${valor.toFixed(2)}` },
     { key: "Data", value: data },
   ];
 
@@ -37,7 +83,7 @@ const TransacaoItemList = ({ transacao }) => {
     { key: "Hora", value: hora },
     { key: "Categoria", value: categoria },
     { key: "Tipo", value: tipo },
-    { key: "Moeda", value: moeda },
+    { key: "Moeda", value: moedaCotacao },
   ];
 
   // Combinar dados com base na orientação
@@ -52,7 +98,12 @@ const TransacaoItemList = ({ transacao }) => {
       </View>
       <View style={styles.row}>
         <Text style={styles.label}>Valor:</Text>
-        <Text style={styles.value}>R$ {valor.toFixed(2)}</Text>
+        <Text style={styles.value}>
+          R${" "}
+          {tipoTransacao === "despesa"
+            ? cotacao.cotacaoCompra
+            : cotacao.cotacaoVenda}
+        </Text>
       </View>
       <View style={styles.row}>
         <Text style={styles.label}>Data:</Text>
